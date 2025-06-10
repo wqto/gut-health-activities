@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>インタラクティブ腸活・自己啓発ガイド</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Calm Harmony Neutrals -->
+    <!-- Application Structure Plan: A thematic, single-page journey designed for user exploration, not a linear report reproduction. The structure flows from the foundational 'Why' (the Gut-Brain Axis) to 'Who' (the Experts), then to the practical 'How' (Interactive Guide), and finally to the 'Impact' (Visualization). This non-linear, thematic approach allows users to dive into the area that interests them most, fostering engagement and better knowledge retention. Key interactions include tabbed sections and clickable expert profiles to reveal information progressively, preventing overwhelm and encouraging active participation. -->
+    <!-- Visualization & Content Choices: Report Info: Gut-Brain Axis -> Goal: Explain a core concept -> Viz/Presentation: HTML/CSS diagram -> Interaction: Hover to reveal details -> Justification: A simple visual is more intuitive than a dense paragraph for a scientific concept. Report Info: Three experts' philosophies -> Goal: Compare experts -> Viz/Presentation: Interactive cards -> Interaction: Click to show/hide details -> Justification: Allows easy comparison without information overload. Report Info: Practical tips (diet, exercise) -> Goal: Organize actionable advice -> Viz/Presentation: Tabbed content sections -> Interaction: Click tabs -> Justification: Organizes diverse tips into clear, user-selectable categories. Report Info: Holistic benefits -> Goal: Show relationships -> Viz/Presentation: Chart.js Radar Chart -> Interaction: Button clicks update chart -> Justification: Dynamically shows how specific actions (e.g., better diet) impact overall well-being, making the benefits tangible. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+            background-color: #F8F7F4;
+            color: #343A40;
+        }
+        .bg-primary { background-color: #F8F7F4; }
+        .bg-secondary { background-color: #EAE7DC; }
+        .bg-accent { background-color: #A3B18A; }
+        .text-accent { color: #A3B18A; }
+        .border-accent { border-color: #A3B18A; }
+        .btn-accent {
+            background-color: #A3B18A;
+            color: white;
+            transition: background-color 0.3s ease;
+        }
+        .btn-accent:hover {
+            background-color: #8c9a72;
+        }
+        .nav-link {
+            position: relative;
+            cursor: pointer;
+            padding: 0.5rem 0;
+            color: #5c6650;
+            transition: color 0.3s ease;
+        }
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background-color: #A3B11A;
+            transition: width 0.3s ease;
+        }
+        .nav-link:hover::after, .nav-link.active::after {
+            width: 100%;
+        }
+        .nav-link:hover {
+            color: #343A40;
+        }
+        .content-section {
+            display: none;
+        }
+        .content-section.active {
+            display: block;
+        }
+        .expert-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .expert-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .tab {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px;
+            max-height: 450px;
+        }
+        @media (min-width: 768px) {
+            .chart-container {
+                height: 450px;
+            }
+        }
+        .color-sample {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 1px solid #ccc;
+            vertical-align: middle;
+            margin-left: 5px;
+            border-radius: 4px;
+        }
+        /* Modal styles are no longer directly used for image display, but kept in case of future use */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.7);
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: auto;
+            padding: 20px;
+            border-radius: 8px;
+            max-width: 90%;
+            max-height: 90%;
+            overflow: auto;
+            position: relative;
+        }
+        .modal-content img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 0 auto;
+        }
+        .close-button {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            position: absolute;
+            top: 10px;
+            right: 20px;
+        }
+        .close-button:hover,
+        .close-button:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body class="bg-primary">
+
+    <header class="bg-secondary shadow-md sticky top-0 z-50">
+        <nav class="container mx-auto px-6 py-3">
+            <div class="flex justify-between items-center">
+                <div class="text-xl font-bold text-accent">腸活 × 自己啓発ガイド</div>
+                <div class="hidden md:flex space-x-8">
+                    <a data-target="home" class="nav-link active">イントロ</a>
+                    <a data-target="experts" class="nav-link">専門家</a>
+                    <a data-target="guide" class="nav-link">実践ガイド</a>
+                    <a data-target="impact" class="nav-link">心身への影響</a>
+                </div>
+                <div class="md:hidden">
+                    <select id="mobile-nav" class="bg-white border border-gray-300 rounded-md py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent">
+                        <option value="home">イントロ</option>
+                        <option value="experts">専門家</option>
+                        <option value="guide">実践ガイド</option>
+                        <option value="impact">心身への影響</option>
+                    </select>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <section id="home" class="content-section active">
+            <div class="container mx-auto px-6 py-16 text-center">
+                <h1 class="text-4xl md:text-5xl font-bold mb-4">内側から、あなたを変える。</h1>
+                <p class="text-lg md:text-xl text-gray-600 mb-8 max-w-3xl mx-auto">腸内環境を整えることが、いかに心、身体、そして人生そのものにポジティブな影響を与えるのか。科学的知見に基づいた、新しい自己啓発の旅へようこそ。</p>
+            </div>
+
+            <div class="bg-secondary py-16">
+                <div class="container mx-auto px-6">
+                    <h2 class="text-3xl font-bold text-center mb-2">なぜ腸が「第二の脳」なのか？</h2>
+                    <p class="text-center text-gray-600 mb-12 max-w-2xl mx-auto">私たちの心と腸は、「脳腸相関」という見えないネットワークで密接に結びついています。ストレスがお腹の不調を招き、腸の健康が気分や思考を左右する。この双方向の対話が、私たちのウェルビーイングの鍵を握っています。</p>
+                    
+                    <div class="flex flex-col md:flex-row items-center justify-center space-y-8 md:space-y-0 md:space-x-8">
+                        <div class="text-center p-6 bg-primary rounded-lg shadow-lg w-64">
+                            <div class="text-5xl mb-2">🧠</div>
+                            <h3 class="text-xl font-bold mb-2">脳</h3>
+                            <p class="text-gray-600">ストレス・感情</p>
+                        </div>
+
+                        <div class="flex items-center justify-center text-3xl font-bold text-accent h-16 md:h-auto md:w-32">
+                            <span class="transform -rotate-90 md:rotate-0">⇄</span>
+                        </div>
+
+                        <div class="text-center p-6 bg-primary rounded-lg shadow-lg w-64">
+                            <div class="text-5xl mb-2">🦠</div>
+                            <h3 class="text-xl font-bold mb-2">腸</h3>
+                            <p class="text-gray-600">消化・免疫・神経伝達</p>
+                        </div>
+                    </div>
+                    <p class="text-center text-gray-500 mt-8 max-w-3xl mx-auto">このセクションでは、脳と腸の相互作用の基本を探ります。腸内細菌がストレス応答をコントロールし、メンタルヘルスに直接影響を与えるメカニズムを理解することが、内側からの自己変革の第一歩です。</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="experts" class="content-section">
+            <div class="container mx-auto px-6 py-16">
+                <h2 class="text-3xl font-bold text-center mb-4">専門家の知見に学ぶ</h2>
+                <p class="text-center text-gray-600 mb-12 max-w-3xl mx-auto">腸内環境と自己啓発の関連性を提唱する3名の第一人者たち。彼らの異なるアプローチから、あなたの人生を変えるヒントを見つけましょう。カードをクリックして詳細をご覧ください。</p>
+
+                <div class="grid md:grid-cols-3 gap-8 mb-12">
+                    <div class="expert-card bg-secondary p-6 rounded-lg shadow-md text-center cursor-pointer" data-expert="benno">
+                        <h3 class="text-xl font-bold mb-2">辨野 義己 博士</h3>
+                        <p class="text-accent font-semibold">腸内細菌学</p>
+                        <p class="text-gray-600 mt-2">「腸内フローラ」の名付け親。腸年齢と健康寿命の関係を解き明かす。</p>
+                    </div>
+                    <div class="expert-card bg-secondary p-6 rounded-lg shadow-md text-center cursor-pointer" data-expert="adamski">
+                        <h3 class="text-xl font-bold mb-2">フランク・ラポルト＝アダムスキー氏</h3>
+                        <p class="text-accent font-semibold">自然療法</p>
+                        <p class="text-gray-600 mt-2">食べ物の「組み合わせ」に着目した、ユニークな腸活メソッドを提唱。</p>
+                    </div>
+                    <div class="expert-card bg-secondary p-6 rounded-lg shadow-md text-center cursor-pointer" data-expert="sudo">
+                        <h3 class="text-xl font-bold mb-2">須藤 信行 教授</h3>
+                        <p class="text-accent font-semibold">脳腸相関・心身医学</p>
+                        <p class="text-gray-600 mt-2">腸内細菌とストレス、メンタルヘルスに関する研究。</p>
+                    </div>
+                </div>
+
+                <div id="expert-details" class="bg-white p-8 rounded-lg shadow-lg min-h-[20rem] transition-opacity duration-500 ease-in-out">
+                </div>
+            </div>
+        </section>
+        
+        <section id="guide" class="content-section">
+            <div class="bg-secondary py-16">
+                <div class="container mx-auto px-6">
+                    <h2 class="text-3xl font-bold text-center mb-4">今日から始める、実践的「腸活」ガイド</h2>
+                    <p class="text-center text-gray-600 mb-12 max-w-3xl mx-auto">専門家の知見を統合し、日常生活に取り入れやすいアクションプランを作成しました。食事、生活習慣、心の持ち方という3つの側面から、あなたの腸内環境を整え、自己変革を促します。下のタブをクリックして、具体的な方法を探りましょう。</p>
+                    
+                    <div class="max-w-4xl mx-auto">
+                        <div class="flex justify-center border-b-2 border-gray-200 mb-8">
+                            <div class="tab px-6 py-3 text-lg font-medium text-gray-500 border-b-4 border-transparent" data-tab="diet">食事編</div>
+                            <div class="tab px-6 py-3 text-lg font-medium text-gray-500 border-b-4 border-transparent" data-tab="lifestyle">生活習慣編</div>
+                            <div class="tab px-6 py-3 text-lg font-medium text-gray-500 border-b-4 border-transparent" data-tab="mind">メンタル編</div>
+                        </div>
+
+                        <div id="diet" class="tab-content bg-white p-8 rounded-lg shadow-lg">
+                        </div>
+                        <div id="lifestyle" class="tab-content bg-white p-8 rounded-lg shadow-lg">
+                        </div>
+                        <div id="mind" class="tab-content bg-white p-8 rounded-lg shadow-lg">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="impact" class="content-section">
+            <div class="container mx-auto px-6 py-16">
+                <h2 class="text-3xl font-bold text-center mb-4">腸活がもたらす心身の変化</h2>
+                <p class="text-center text-gray-600 mb-12 max-w-3xl mx-auto">腸内環境を整えることは、便通改善といった身体的な効果だけではありません。精神的な安定、ストレス耐性の向上、思考の明瞭化など、自己啓発の土台となる様々なポジティブな変化をもたらします。下のチャートでその関係性を視覚的に探ってみましょう。</p>
+                <div class="chart-container">
+                    <canvas id="impactChart"></canvas>
+                </div>
+                <div class="text-center mt-8">
+                     <p class="text-gray-600 mb-4">あなたの今の状態は？ボタンを押して、特定の取り組みが全体にどう影響するか見てみましょう。</p>
+                    <button class="chart-update-btn btn-accent py-2 px-4 rounded-lg" data-state="base">バランス型</button>
+                    <button class="chart-update-btn bg-gray-300 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-400 transition" data-state="diet">食事重視</button>
+                    <button class="chart-update-btn bg-gray-300 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-400 transition" data-state="sleep">睡眠改善</button>
+                    <button class="chart-update-btn bg-gray-300 text-gray-800 py-2 px-4 rounded-lg hover:bg-gray-400 transition" data-state="stress">ストレス軽減</button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-secondary mt-16 py-8">
+        <div class="container mx-auto px-6 text-center text-gray-600">
+            <p>&copy; 2024 インタラクティブ腸活・自己啓発ガイド. All Rights Reserved.</p>
+            <p class="text-sm mt-2">このアプリケーションは、提供されたレポート情報に基づき、教育目的で作成されました。</p>
+        </div>
+    </footer>
+
+    <!-- Image Modal (機能は残すが見えないようにしておく) -->
+    <div id="imageModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <img id="modalImage" src="" alt="食物繊維の種類">
+        </div>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const expertData = {
+        benno: {
+            name: "辨野 義己 博士",
+            field: "腸内細菌学",
+            title: "「腸活」で健康寿命を延ばす",
+            description: "半世紀にわたる研究で「腸内フローラ」「腸年齢」「腸活」などの言葉を生み出した第一人者。腸内細菌のバランスが免疫、ストレス、さらには認知症にまで影響を与えることを解明。自身の食生活改善による劇的な体質変化（体重減、花粉症改善）の経験も持ち、理論と実践の両面から腸活の重要性を説く。",
+            advice: "「毎日のお通じ」を健康のバロメーターとし、食物繊維（特に水溶性と不溶性のバランス）と発酵食品（ヨーグルト1日300g以上）の摂取、適度な運動を推奨。",
+            book: "代表著書: 『健康寿命は腸内細菌が決める』"
+        },
+        adamski: {
+            name: "フランク・ラポルト＝アダムスキー氏",
+            field: "自然療法",
+            title: "食べ物の「組み合わせ」革命",
+            description: "欧州で絶大な支持を得る「アダムスキー式腸活法」の提唱者。厳しい食事制限ではなく、食べ物を消化速度によって「ファスト」「スロー」に分け、それらを同時に摂らないというシンプルなルールを提唱。これにより腸の汚れを防ぎ、心身の不調を根本から改善し「人生を変える」ことを目指す。",
+            advice: "果物（ファスト）とパンや肉（スロー）は一緒に食べない。トマトやパプリカはファストなので、パスタ（スロー）との組み合わせには注意が必要。",
+            book: "代表著書: 『腸がすべて』"
+        },
+        sudo: {
+            name: "須藤 信行 教授",
+            field: "脳腸相関・心身医学",
+            title: "ストレスと腸の科学",
+            description: "「脳-腸-腸内細菌相関」研究の国内トップランナー。無菌マウスの実験により、腸内細菌がいないとストレス反応が強くなること、またビフィズス菌などの善玉菌を与えることでストレス反応が沈静化することを発見。腸内環境がうつ病や過敏性腸症候群（IBS）などのメンタルヘルスに深く関わることを科学的に証明し、生活習慣病としてのアプローチを提唱。",
+            advice: "プロバイオティクス（善玉菌）の摂取がストレス応答を穏やかにする。質の良い睡眠、リラクゼーションが自律神経を整え、腸と脳の良好な関係を築く。",
+            book: "多数の学術論文、共著書を発表。"
+        }
+    };
+
+    const guideData = {
+        diet: {
+            title: "食事編：美腸をつくる食べ方",
+            points: [
+                { icon: '🌾', title: '多様な食物繊維を摂る', detail: '善玉菌のエサとなる水溶性（海藻、果物）と、便通を促す不溶性（きのこ、豆類）をバランス良く。辨野博士は「水溶性2：不溶性3」の割合を推奨。<br><br><b>食物繊維の種類と多く含む食品：</b><br>・<b>水溶性食物繊維:</b> 海藻類（昆布、わかめ、めかぶ）、果物（りんご、バナナ、柑橘類）、大麦、里芋、こんにゃく<br>・<b>不溶性食物繊維:</b> キノコ類（しいたけ、えのき、しめじ）、豆類（大豆、小豆、インゲン豆）、野菜（ごぼう、にんじん、キャベツ）、穀類（玄米、全粒粉パン）' }, // ボタンを削除し、テキストのみに戻す
+                { icon: 'ヨーグルトの記号', title: '発酵食品を毎日', detail: 'ヨーグルト、味噌、納豆、キムチなど。善玉菌を直接補給し、腸内フローラを整えます。加熱した味噌汁でも有用菌は効果を発揮します。' },
+                { icon: '🍎+🍞=❌', title: 'アダムスキー式「組み合わせ」', detail: '消化の速い「ファスト」（果物、トマト等）と遅い「スロー」（炭水化物、肉等）を同時に食べない。消化の負担を減らし、腸の汚れを防ぎます。' },
+                { icon: '💧', title: '良質な水分補給', detail: '腸への負担が少ない軟水をこまめに摂取することで、スムーズな水分補給とデトックスを促します。' }
+            ]
+        },
+        lifestyle: {
+            title: "生活習慣編：腸を動かす日常の工夫",
+            points: [
+                { icon: '💩', title: '排便習慣の記録と「良い便」を知る', detail: '毎日決まった時間帯にトイレに行く習慣を。便の色や形は健康のサイン。記録することで自分の体調変化に気づきやすくなります。（辨野博士）<br><br><b>「良い便」とは？</b><br>理想的な便は、バナナ状で、色は黄褐色<span class="color-sample" style="background-color: #D2B48C;"></span>、臭いはきつくなく、水に浮くか、ゆっくり沈むものです。スルッとスムーズに出るのが特徴で、排便後に残便感がありません。固すぎたり、泥状・水状の便は腸内環境の乱れを示唆する可能性があります。' },
+                { icon: '🚶‍♀️', title: '適度な運動', detail: 'ウォーキングや階段の上り下り、腹筋運動など。腸の蠕動運動を活発にし、血行を促進。ストレス解消にも繋がります。' }
+            ]
+        },
+        mind: {
+            title: "メンタル編：心と腸を繋ぐアプローチ",
+            points: [
+                { icon: '😄', title: '笑いとリラックス', detail: '笑うことは副交感神経を優位にし、腸の働きを活性化させます。瞑想や深呼吸など、自分なりのリラックス法を見つけましょう。' },
+                { icon: '🧘', title: 'ストレス管理', detail: 'ストレスは腸内環境を悪化させる最大の要因の一つ。腸内細菌のバランスが崩れると、さらにストレスを感じやすくなる悪循環に。（須藤教授）' },
+                { icon: '🍽️', title: 'マインドフルな食事', detail: 'スマホを見ながらの「ながら食い」をやめ、食事に集中する。よく噛むことで消化が助けられ、満足感も高まります。' },
+                { icon: '😴', title: '質の良い睡眠', detail: '睡眠中に腸は活発に働きます。自律神経のバランスを整え、心身の疲労を回復させることが、腸の健康に不可欠です。（須藤教授）<br><br><b>質の良い睡眠のための具体的な方法:</b><br><ul><li><b>規則正しい睡眠スケジュール:</b> 毎日同じ時間に就寝・起床し、体内時計を整えましょう。週末も大きくずらさないことが理想です。</li><li><b>寝室環境の最適化:</b> 寝室を暗く、静かで、涼しい状態に保ちます。快適な寝具を選ぶことも大切です。</li><li><b>就寝前のリラックス習慣:</b> 就寝の1～2時間前には、温かいお風呂に入る、読書をする、軽いストレッチをするなど、心身を落ち着かせる活動を取り入れましょう。スマートフォンやPCの画面（ブルーライト）を見るのは避けましょう。</li><li><b>日中の適度な運動:</b> 適度な運動は質の高い睡眠に繋がりますが、就寝直前の激しい運動は避け、就寝の3時間前までには済ませましょう。</li><li><b>カフェイン・アルコール制限:</b> 就寝数時間前からはカフェイン（コーヒー、紅茶、エナジードリンクなど）やアルコールの摂取を控えることが重要です。これらは睡眠の質を低下させます。</li><li><b>朝の光を浴びる:</b> 起床後すぐに太陽の光を浴びることで、体内時計がリセットされ、夜に自然な眠気が訪れやすくなります。</li></ul>' }
+            ]
+        }
+    };
+
+    const chartData = {
+        base: [8, 7, 9, 7, 8],
+        diet: [10, 7, 8, 8, 9],
+        sleep: [7, 9, 10, 8, 9],
+        stress: [9, 8, 9, 10, 10],
+    };
+
+    const sections = document.querySelectorAll('.content-section');
+    const navLinks = document.querySelectorAll('.nav-link');
+    const mobileNav = document.getElementById('mobile-nav');
+
+    function switchSection(targetId) {
+        sections.forEach(section => {
+            section.classList.toggle('active', section.id === targetId);
+        });
+        navLinks.forEach(link => {
+            link.classList.toggle('active', link.dataset.target === targetId);
+        });
+        if (mobileNav.value !== targetId) {
+            mobileNav.value = targetId;
+        }
+    }
+
+    navLinks.forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            switchSection(e.target.dataset.target);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+    });
+
+    mobileNav.addEventListener('change', (e) => {
+        switchSection(e.target.value);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+
+
+    const expertCards = document.querySelectorAll('.expert-card');
+    const expertDetailsContainer = document.getElementById('expert-details');
+
+    function displayExpertDetails(expertId) {
+        const data = expertData[expertId];
+        if (!data) {
+            expertDetailsContainer.innerHTML = '<p class="text-center text-gray-500">上のカードをクリックして専門家の詳細をご覧ください。</p>';
+            return;
+        }
+        expertDetailsContainer.style.opacity = '0';
+        setTimeout(() => {
+            expertDetailsContainer.innerHTML = `
+                <h3 class="text-2xl font-bold mb-2 text-accent">${data.title}</h3>
+                <p class="text-lg font-semibold mb-4">${data.name} / ${data.field}</p>
+                <p class="text-gray-700 mb-4">${data.description}</p>
+                <p class="text-gray-700 mb-4"><strong class="font-semibold">実践のヒント:</strong> ${data.advice}</p>
+                <p class="text-sm text-gray-500">${data.book}</p>
+            `;
+            expertDetailsContainer.style.opacity = '1';
+        }, 300);
+    }
+    
+    expertCards.forEach(card => {
+        card.addEventListener('click', () => {
+            expertCards.forEach(c => c.classList.remove('bg-accent', 'text-white'));
+            card.classList.add('bg-accent', 'text-white');
+            displayExpertDetails(card.dataset.expert);
+        });
+    });
+
+    displayExpertDetails(null);
+    expertCards[0].classList.add('bg-accent', 'text-white');
+    displayExpertDetails(expertCards[0].dataset.expert);
+
+    const tabs = document.querySelectorAll('.tab');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    function populateGuideTabs() {
+        Object.keys(guideData).forEach(key => {
+            const container = document.getElementById(key);
+            const data = guideData[key];
+            const pointsHtml = data.points.map(point => `
+                <div class="flex items-start mb-6">
+                    <div class="text-3xl mr-4">${point.icon.replace('ヨーグルトの記号', '🥛')}</div>
+                    <div>
+                        <h4 class="font-bold text-lg">${point.title}</h4>
+                        <p class="text-gray-600">${point.detail}</p>
+                    </div>
+                </div>
+            `).join('');
+            container.innerHTML = `
+                <h3 class="text-2xl font-bold mb-6">${data.title}</h3>
+                ${pointsHtml}
+            `;
+        });
+        // 画像モーダルのボタンと関連ロジックは削除されたため、ここでの処理は不要
+    }
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            const target = tab.dataset.tab;
+            
+            tabs.forEach(t => {
+                t.classList.remove('text-accent', 'border-accent');
+                t.classList.add('text-gray-500', 'border-transparent');
+            });
+            tab.classList.add('text-accent', 'border-accent');
+            tab.classList.remove('text-gray-500', 'border-transparent');
+
+            tabContents.forEach(content => {
+                content.classList.toggle('active', content.id === target);
+            });
+            populateGuideTabs(); // Repopulate to ensure content is updated correctly
+        });
+    });
+
+    populateGuideTabs();
+    tabs[0].click();
+    
+    const ctx = document.getElementById('impactChart').getContext('2d');
+    const impactChart = new Chart(ctx, {
+        type: 'radar',
+        data: {
+            labels: ['エネルギー', '睡眠の質', 'ストレス耐性', '思考の明晰さ', 'ポジティブ度'],
+            datasets: [{
+                label: '心身の状態',
+                data: chartData.base,
+                backgroundColor: 'rgba(163, 177, 138, 0.2)',
+                borderColor: 'rgba(163, 177, 138, 1)',
+                borderWidth: 2,
+                pointBackgroundColor: 'rgba(163, 177, 138, 1)',
+                pointBorderColor: '#fff',
+                pointHoverBackgroundColor: '#fff',
+                pointHoverBorderColor: 'rgba(163, 177, 138, 1)'
+            }]
+        },
+        options: {
+            maintainAspectRatio: false,
+            scales: {
+                r: {
+                    angleLines: {
+                        color: 'rgba(0, 0, 0, 0.1)'
+                    },
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.1)'
+                    },
+                    pointLabels: {
+                        font: {
+                            size: 14,
+                            family: "'Noto Sans JP', sans-serif"
+                        },
+                        color: '#343A40'
+                    },
+                    ticks: {
+                        backdropColor: 'rgba(248, 247, 244, 1)',
+                        color: 'grey',
+                        stepSize: 2,
+                        beginAtZero: true,
+                        max: 10
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+
+    const chartUpdateBtns = document.querySelectorAll('.chart-update-btn');
+    chartUpdateBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const state = btn.dataset.state;
+            impactChart.data.datasets[0].data = chartData[state];
+            impactChart.update();
+            chartUpdateBtns.forEach(b => {
+                b.classList.remove('btn-accent');
+                b.classList.add('bg-gray-300', 'text-gray-800');
+            });
+            btn.classList.add('btn-accent');
+            btn.classList.remove('bg-gray-300', 'text-gray-800');
+        });
+    });
+
+    // Modal functionality (表示されない問題を考慮し、画像参照は削除)
+    const modal = document.getElementById('imageModal');
+    const closeButton = document.querySelector('.close-button');
+
+    closeButton.addEventListener('click', () => {
+        modal.style.display = 'none';
+    });
+
+    window.addEventListener('click', (event) => {
+        if (event.target == modal) {
+            modal.style.display = 'none';
+        }
+    });
+});
+</script>
+</body>
+</html>
